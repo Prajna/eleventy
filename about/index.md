@@ -1,9 +1,9 @@
 ---
 layout: layouts/post.njk
-title: About Me
+title: 关于我
 templateClass: tmpl-post
 eleventyNavigation:
-  key: About Me
+  key: 关于我
   order: 3
 ---
 

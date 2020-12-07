@@ -1,20 +1,20 @@
 {
   "title": "Space Lions",
-  "url": "https://blog.spacelions.com/",
+  "url": "http://blog.spacelions.com/",
   "description": "写一点乱七八糟的东西。",
   "feed": {
     "subtitle": "写一点乱七八糟的东西。",
     "filename": "feed.xml",
     "path": "/feed/feed.xml",
-    "id": "https://blog.spacelions.com/"
+    "id": "http://blog.spacelions.com/"
   },
   "jsonfeed": {
     "path": "/feed/feed.json",
-    "url": "https://blog.spacelions.com/feed/feed.json"
+    "url": "http://blog.spacelions.com/feed/feed.json"
   },
   "author": {
     "name": "Fu Zhang",
     "email": "nihilism@me.com",
-    "url": "https://blog.spacelions.com/about-me/"
+    "url": "http://blog.spacelions.com/about-me/"
   }
 }
