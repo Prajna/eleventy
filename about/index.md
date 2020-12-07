@@ -7,4 +7,4 @@ eleventyNavigation:
   order: 3
 ---
 
-I am a person that writes stuff.
+我是一个程序员，在这边写一点乱七八糟的东西。
