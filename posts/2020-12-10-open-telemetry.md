@@ -1,11 +1,9 @@
 ---
 title: OpenTelemetry的一些随笔(1)
-description: OpenTelemetry
+description: OpenTelemetry的一些随笔
 date: 2020-12-10
 tags:
-	- golang
 	- opentelemetry
-	- cloudnative
 layout: layouts/post.njk
 ---
 
@@ -29,13 +27,7 @@ layout: layouts/post.njk
 - Streaming & Messaging 消息化 - 很多公司以为就是用上 kafka 或者任何 mq 就消息化了，实际上关于这一块有非常多可以讨论的方向。很多大厂的人都对此一窍不通，毕竟异步架构比同步架构复杂性增加无数倍。
 - Software Distribution 软件分发 - 这块不是很懂，大概是安全性/P2P 分发之类的，对基础设备非常看重的大厂才会用吧。
 
-这里面有几项，基本上像点样的公司都在做，比如容器化 & CI/CD & k8s & 分布式数据库；但其它部分就基本上是深水区了，不到一定规模估计是用不上的（包括 Service Mesh，很多公司体量根本不需要用，就算用也是当成大号 nginx 来用）。
-
-而深水区之一，就是本文要讨论的主题：observability。
-
-## 为什么是深水区？
-
-因为这在我看来是属于跟 CI/CD 一样的基础设施，但很少有公司从一开始就考虑。
+这十项中，很多公司都有在做，但本文的主题 observability 这个在我看来是属于跟 CI/CD 一样的基础设施，但很少有公司从一开始就考虑。
 
 在这个言必称 Cloud Native 的时代，张口 docker（哪怕 dockerfile 写得跟 xml 一样又臭又长），闭口 kubernetes（哪怕完全不理解 chart 只会东抄一点西抄一点），service mesh、distribution 这些 buzzword 满大街飞，observability 被提及的概率实在是太小了点。
 
@@ -45,5 +37,8 @@ observability 说到底，只是用来看看整个系统运行状态，用于报
 
 - logs：就是日志，毫无技术含量。CNCF 项目中有 fluentd。
 - metrics：就是系统在运行时的一些数据，比如 count（数数，只增不减）、gauge（也是数数，可增可减，反应一段时间内的变化）等。CNCF 项目中有 prometheus。
-- traces：记录某个 request 或者某条 event 在它的生命周期内，在不同的 service 留下的痕迹。简单来说，可以理解为集中式日志，而不用在不同service log之间跳来跳去查找问题。
+- traces：记录某个 request 或者某条 event 在它的生命周期内，在不同的 service 留下的痕迹。简单来说，可以理解为集中式日志，而不用在不同 service log 之间跳来跳去查找问题。CNCF 项目中有 jaeger 和 opentracing（opentracing 只是一个标准）。
 
+可以看得到 CNCF 在这三块都有孵化项目，但是都是各司一职。OpenTelemetry 应运而生，目标是整合这三大块的标准，并且可以利用现有的项目：metrics 可以输出到 prometheus，tracing 可以输出到 jaeger。logs 这一块 OpenTelemetry 还没有动手，但也已经在时间表上了。
+
+关于 OpenTelemetry 的历史，大家可以去网上查查看，在此就只是给大家一个概念。下面我们要用一个具体的例子来说明 OpenTelemetry 到底在干什么。
