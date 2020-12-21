@@ -13,6 +13,8 @@ layout: layouts/post.njk
 
 ## Observability
 
+---
+
 最近呈冉冉向上之势的 CNCF，在前段时间出了个[Trail Map](https://github.com/cncf/trailmap)，上面洋洋洒洒写了十大项。大体意思就是呢，你要搞 Cloud Native 是不是，那你对着这张图看看你到底有没有脸说。
 
 这十大项是
@@ -41,4 +43,92 @@ observability 说到底，只是用来看看整个系统运行状态，用于报
 
 可以看得到 CNCF 在这三块都有孵化项目，但是都是各司一职。OpenTelemetry 应运而生，目标是整合这三大块的标准，并且可以利用现有的项目：metrics 可以输出到 prometheus，tracing 可以输出到 jaeger。logs 这一块 OpenTelemetry 还没有动手，但也已经在时间表上了。
 
-关于 OpenTelemetry 的历史，大家可以去网上查查看，在此就只是给大家一个概念。下面我们要用一个具体的例子来说明 OpenTelemetry 到底在干什么。
+关于 OpenTelemetry 的历史，大家可以去网上查查看，在此就只是给大家一个概念。下面我们要结合一个具体的例子来说明 OpenTelemetry 的基础概念，以及它的实际用处。
+
+## 实践
+
+---
+
+### 安装 Jaeger
+
+```shell
+# 请先确保你机器上有docker
+$ docker run -d --name jaeger \
+  -e COLLECTOR_ZIPKIN_HTTP_PORT=9411 \
+  -p 5775:5775/udp \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 14268:14268 \
+  -p 14250:14250 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:1.21
+```
+
+打开浏览器 http://localhost:16686/ 就可以看到 Jaeger UI。
+
+### 安装Go
+如果你已经安装有Go可以跳进这一步。如果没有的话，可以参考[GVM](https://github.com/moovweb/gvm)。
+
+### 开始
+```go
+package main
+
+// initTracer creates a new trace provider instance and registers it as global trace provider.
+func initTracer() func() {
+	// Create and install Jaeger export pipeline.
+	flush, err := jaeger.InstallNewPipeline(
+		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		jaeger.WithProcess(jaeger.Process{
+			ServiceName: "trace-demo",
+			Tags: []label.KeyValue{
+				label.String("exporter", "jaeger"),
+			},
+		}),
+		jaeger.WithSDK(&sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return flush
+}
+
+func main() {
+	ctx := context.Background()
+
+	flush := initTracer()
+	defer flush()
+
+	tr := otel.Tracer("component-main")
+	ctx, span := tr.Start(ctx, "foo")
+	defer span.End()
+
+	bar(ctx)
+}
+
+func bar(ctx context.Context) {
+	tr := otel.Tracer("component-bar")
+	_, span := tr.Start(ctx, "bar")
+	defer span.End()
+
+	// Do bar...
+}
+```
+尝试运行一下这个例子
+```shell
+$ go run main.go
+```
+然后到http://localhost:16686，就能看到数据就已经进去（虽然这时候并不知道这些东西都是什么）。
+
+下面我要开始解耦整个OpenTelemetry了（用最简单但并不一定准确的语言，因为我们需要先架构一个大蓝图）
+
+## 《史记》
+---
+如果我们要给一个人写传记，大体上应该会照着几个步骤：
+- 开头先写一下这个人姓甚名甚，家庭情况，出生年月等。
+- 中间像记流水帐一样，何年何月在何地做过何事，重要的事就讲详细点，不重要的事就粗略一点。
+- 最后说明一下此人在何时何月何地去世，盖棺论定。
+
+这一人的一生，就可以理解为OpenTelemetry的`trace`。而TA所做的每一件事，都可以理解为`span`。而记录TA这一生故事的纸，可以理解为`trace provider`，我们上面的例子中，`trace provider`就是`jaeger`。
+
