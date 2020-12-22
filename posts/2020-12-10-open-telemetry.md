@@ -76,7 +76,7 @@ $ docker run -d --name jaeger \
 package main
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
-func initTracer() func() {
+func initTracerProvider() func() {
 	// Create and install Jaeger export pipeline.
 	flush, err := jaeger.InstallNewPipeline(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
@@ -97,7 +97,7 @@ func initTracer() func() {
 func main() {
 	ctx := context.Background()
 
-	flush := initTracer()
+	flush := initTracerProvider()
 	defer flush()
 
 	tr := otel.Tracer("component-main")
@@ -130,5 +130,46 @@ $ go run main.go
 - 中间像记流水帐一样，何年何月在何地做过何事，重要的事就讲详细点，不重要的事就粗略一点。
 - 最后说明一下此人在何时何月何地去世，盖棺论定。
 
-这一人的一生，就可以理解为OpenTelemetry的`trace`。而TA所做的每一件事，都可以理解为`span`。而记录TA这一生故事的纸，可以理解为`trace provider`，我们上面的例子中，`trace provider`就是`jaeger`。
+这一人的一生，就可以理解为OpenTelemetry的`tracer`。而TA所做的每一件事，都可以理解为`span`。而记录TA这一生故事的纸，可以理解为`tracer provider`，在上面的例子中，`tracer provider`就是`jaeger`。
 
+所以，在上面的例子中，我们实际上做了这些事情：
+- 在main函数中，生成一个tracer。
+- 调用这个tracer.Start，得到一个context，以及一个span（这个span的名字叫做foo）。
+- 调用bar方法，将context做为参数传入。
+- 在bar方法中，再生成一个tracer。
+- 调用该tracer.Start方法，将上面传入的context作为参数，得到context和一个新的span（这个span名字叫做bar）。
+- 调用在defer中的flush()，将trace和span信息一并保存到`trace provider` `jaeger`中。
+
+在这里可能有点混淆，看`jaeger`里面的意思，这两个名字分别是`foo`和`bar`是属于同一个`trace`的，但是为什么在这里我们却是两个`tracer`？
+
+答案很简单，因为`trace`的信息并不保存在`tracer`里面，而是保存在`context`里面。
+
+前面有提到，`context`里面实际保存了`span` foo的完整信息，`span` foo中有一个`SpanContext`对象，`SpanContext`对象其中保存着`TraceID`。当用非空的`context`作为参数调用tracer.Start时，新生成的`span` bar将用同样的`TraceID`。所以在`jaeger`里面这两个自然会被当成同一个`trace`。
+
+这一段代码里在`opentelemetry-go/sdk/trace/span.go`的`startSpanInternal`中
+```go
+func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trace.SpanContext, remoteParent bool, o *trace.SpanConfig) *span {
+	span := &span{}
+	span.spanContext = parent
+
+	cfg := tr.provider.config.Load().(*Config)
+
+	if hasEmptySpanContext(parent) {
+		// Generate both TraceID and SpanID
+		span.spanContext.TraceID, span.spanContext.SpanID = cfg.IDGenerator.NewIDs(ctx)
+	} else {
+		// TraceID already exists, just generate a SpanID
+		span.spanContext.SpanID = cfg.IDGenerator.NewSpanID(ctx, parent.TraceID)
+	}
+
+...
+}
+```
+可以在上面例子中尝试打印`span.SpanContext().TraceID`，会发现两者是一样的。
+```shell
+$ go run main.go
+foo span trace id 16749d09802cf5e0c8299edb59a6b6ed
+bar span trace id 16749d09802cf5e0c8299edb59a6b6ed
+```
+
+现在相信大家已经明白如何在同一个服务中，利用jaeger进行tracing，在下一篇里面会讲解open-telemetry真正的作用，如何在不同的服务中进行tracing。
