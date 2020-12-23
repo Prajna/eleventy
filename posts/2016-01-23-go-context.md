@@ -26,7 +26,7 @@ func blabla(ctx context.Context, ...) ... {
 满天飞的。
 
 我们来看Google官方是怎么说的：
-```english
+```quote
 At Google, we require that Go programmers pass a Context parameter as the first argument to every function on the call path between incoming and outgoing requests. (...) It provides simple control over timeouts and cancelation and ensures that critical values like security credentials transit Go programs properly.
 
 在Google，我们要求所有go程序员都把context当成第一个参数，从头传到尾。在取消和超时上它提供了很简单的控制，也保证了重要的值（比如crendentials）可以稳稳到达go程序。
