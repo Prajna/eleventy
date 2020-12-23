@@ -161,7 +161,6 @@ func startSpanInternal(ctx context.Context, tr *tracer, name string, parent trac
 		// TraceID already exists, just generate a SpanID
 		span.spanContext.SpanID = cfg.IDGenerator.NewSpanID(ctx, parent.TraceID)
 	}
-
 ...
 }
 ```
